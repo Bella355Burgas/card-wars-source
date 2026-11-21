@@ -466,7 +466,7 @@ func _row(r: Dictionary, request := false) -> Control:
 	else:
 		_play_button(h, r, nick, st, "Войти", "Позвать")
 		if fr == "friend":
-			if st == "game" and m.social_status()[0] != "game":
+			if st == "game" and m.social_status()[0] != "game" and can_watch(r):
 				var wc := String(r.get("wc", ""))
 				var eye := WoodUI.eye_button(UI.BLUE, 54)
 				eye.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -484,6 +484,15 @@ func _row(r: Dictionary, request := false) -> Control:
 ## «Войти» into the room of a player (the relay shows its code to those it is open to: a friend, or
 ## everybody when its owner left it open), or «Позвать» into our own room: anybody online, but not one
 ## who takes invites from friends only ("ni").
+## A friend's row in a game: can it be watched. Their game says so in its status ("w": a match for two
+## online, not one against the AI); a row without it (an older game, or a server that does not pass it
+## on) keeps the eye, and the friend's game answers if it can't be watched.
+static func can_watch(r: Dictionary) -> bool:
+	if String(r.get("wc", "")) != "":
+		return true
+	return r.get("w") != false if r.has("w") else true
+
+
 func _play_button(row: Control, r: Dictionary, nick: String, st: String, join_text: String, call_text: String) -> void:
 	if String(r.get("code", "")) != "" and m.social_status()[0] != "game":
 		row.add_child(_small(join_text, UI.GREEN, func(): _join(String(r["code"]))))
@@ -756,6 +765,8 @@ func _append(msg: Dictionary) -> void:
 
 func _on_message(ch: String, msg: Dictionary) -> void:
 	var service := _watch_message(ch, msg)
+	if ch != Social.COMMON and ch != Social.GAME and Social.is_service(String(msg.get("text", ""))):
+		return      # the eye's messages (Social.add keeps them out of the chat)
 	if _shown and _tab == "chat" and ch == _channel:
 		_append(msg)
 		social.read(ch)

@@ -2879,8 +2879,9 @@ func social_status() -> Array:
 	if board != null:
 		if net.mode == "relay" and net.room_code != "" and _replay == null:
 			# The room and its seat token: the server names the player of the seat in its log.
-			return ["game", net.room_code, "friends", net.seat_token(), inv, friend_watch_code()]
-		return ["watch" if net.mode == "watch" or _replay != null else ("game" if _mode != "run" else "train"), "", "friends", "", inv]
+			return ["game", net.room_code, "friends", net.seat_token(), inv, friend_watch_code(), online_duel()]
+		return ["watch" if net.mode == "watch" or _replay != null else ("game" if _mode != "run" else "train"), "", "friends", "", inv,
+			"", online_duel()]
 	if run_screen != null:
 		return ["train", "", "friends", "", inv]
 	if net.mode == "relay" and net.room_code != "" and net.is_host and net.tour.is_empty():

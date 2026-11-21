@@ -258,6 +258,9 @@ func _msg(d: Dictionary) -> Dictionary:
 
 ## A message into a channel (from the server, from the match, or a line of the game: "sys").
 func add(ch: String, msg: Dictionary) -> void:
+	if ch != COMMON and ch != GAME and is_service(String(msg.get("text", ""))):
+		message.emit(ch, msg)       # the eye's messages (WATCH_*): the panel answers them, the chat never shows them
+		return
 	if not chats.has(ch):
 		chats[ch] = []
 	chats[ch].append(msg)
@@ -386,7 +389,15 @@ func _push_status() -> void:
 		"rt": st[3] if st.size() > 3 else "", "inv": st[4] if st.size() > 4 else "all"}
 	if st.size() > 5 and String(st[5]) != "":
 		d["wc"] = st[5]     # the watch code of our match: the server may give it to friends (rows' "wc")
+	if st.size() > 6:
+		d["w"] = st[6]      # in a game: can friends watch it (a match for two online), not one against the AI
 	_put(d)
+
+
+## A private message of the eye (WATCH_ASK / WATCH_CODE / WATCH_NONE): handled, never shown.
+static func is_service(text: String) -> bool:
+	text = text.strip_edges()
+	return text == WATCH_ASK or text == WATCH_NONE or watch_code_in(text) != ""
 
 
 ## The watch code in a message of the form WATCH_CODE + code, or "".

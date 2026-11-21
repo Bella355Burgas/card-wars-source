@@ -1,0 +1,57 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Карточные войны: Финн против Джейка"
+config/description="Хотсит-порт настольной игры «Карточные войны: Финн против Джейка» (2016)."
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+boot_splash/bg_color=Color(0.05, 0.04, 0.09, 1)
+boot_splash/show_image=false
+config/icon="res://icon.svg"
+config/name.macos="CardWars"
+
+[autoload]
+
+Patch="res://scripts/patch_loader.gd"
+Sfx="*res://scripts/ui/sfx.gd"
+Net="*res://scripts/net/net.gd"
+
+[display]
+
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/size/window_width_override=1600
+window/size/window_height_override=900
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[gui]
+
+theme/custom_font="res://assets/fonts/ui_font.tres"
+
+[importer_defaults]
+
+texture={
+"mipmaps/generate": true
+}
+
+[physics]
+
+3d/physics_engine="Jolt Physics"
+
+[rendering]
+
+textures/canvas_textures/default_texture_filter=3
+rendering_device/driver.windows="d3d12"
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true

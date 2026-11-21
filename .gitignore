@@ -1,0 +1,19 @@
+.godot/
+/android/
+build/
+bin/
+*.translation
+__pycache__/
+*.pyc
+export*.log
+export_presets.cfg
+
+# Pictures, music and sounds come from an installed game (README)
+/assets/*
+!/assets/fonts/
+/card_backs/
+/icon/
+game_path.txt
+
+rl_training/runs/
+rl_training/checkpoints/

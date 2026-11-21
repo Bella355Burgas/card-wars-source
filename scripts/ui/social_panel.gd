@@ -580,9 +580,9 @@ func _start_watch(code: String) -> void:
 	m.watch_friend(code)
 
 
-## A friend asks to watch our match: the watch code if we host one, else why not.
+## A friend asks to watch our match: its watch code (main.friend_cast), or that it can't be watched.
 func _answer_watch(nick: String) -> void:
-	var code: String = m.friend_watch_code()
+	var code: String = await m.friend_cast.code_for_friend()
 	if code == "":
 		social.say(nick, Social.WATCH_NONE)
 		return
@@ -600,8 +600,8 @@ func _watch_message(ch: String, msg: Dictionary) -> bool:
 		return true
 	if text == Social.WATCH_NONE and _watch_wait.has(ch):
 		_watch_wait.erase(ch)
-		_set_note("%s сейчас не хост комнаты, смотреть нельзя" % ch, RED)
-		toast("%s сейчас не хост комнаты, смотреть нельзя" % ch, [], 4.0)
+		_set_note("Игру %s сейчас смотреть нельзя" % ch, RED)
+		toast("Игру %s сейчас смотреть нельзя" % ch, [], 4.0)
 		return true
 	var code := Social.watch_code_in(text)
 	if code == "":

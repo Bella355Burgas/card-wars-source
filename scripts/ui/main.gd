@@ -45,6 +45,7 @@ const HeroSelect = preload("res://scripts/ui/main/hero_select.gd")
 const TrainMenu = preload("res://scripts/ui/main/train_menu.gd")
 const Lobby = preload("res://scripts/ui/main/lobby.gd")
 const Watch = preload("res://scripts/ui/main/watch.gd")
+const FriendCast = preload("res://scripts/ui/main/friend_cast.gd")
 const Ranked = preload("res://scripts/ui/main/ranked.gd")
 const SandboxStart = preload("res://scripts/ui/main/sandbox_start.gd")
 const Social = preload("res://scripts/net/social.gd")
@@ -181,6 +182,7 @@ var hero_select := HeroSelect.new(self)
 var train_menu := TrainMenu.new(self)
 var lobby := Lobby.new(self)
 var watch := Watch.new(self)
+var friend_cast := FriendCast.new(self)     # our match for friends who watch it (the eye on our row)
 var ranked := Ranked.new(self)
 var sandbox_start := SandboxStart.new(self)
 
@@ -1879,6 +1881,7 @@ func _on_game_over(winner: int, note := "") -> void:
 
 func _end_game() -> void:
 	watch.on_end_game()
+	friend_cast.stop()
 	_keep_replay()
 	_stop_rejoin()
 	_close_link_overlay()
@@ -2890,12 +2893,18 @@ func social_status() -> Array:
 	return ["menu", "", "friends", "", inv]
 
 
-## The watch code of the match we host (a room for two, not a tournament's): friends may watch it
-## (the eye on our row, social_panel.gd). "" when there is none.
+## The watch code of the match we host (a room for two, not a ranked or tournament one): friends may
+## watch it (the eye on our row, social_panel.gd). "" when there is none: friend_cast opens a room of its own.
 func friend_watch_code() -> String:
-	if board == null or net.mode != "relay" or not net.is_host or net.team or not net.tour.is_empty():
+	if not online_duel() or net.mode != "relay" or not net.is_host or not net.tour.is_empty():
 		return ""
 	return net.watch_code
+
+
+## We play a match for two against a person online now (any: a room, a quick game, ranked, a direct link).
+func online_duel() -> bool:
+	return board != null and online and not net.team and game != null and game.journal != null \
+		and game.players.size() == 2 and _replay == null and seat >= 0 and game.phase != "over"
 
 
 ## The eye on a friend's row: watches their match by its watch code, from wherever we are.

@@ -216,7 +216,16 @@ func _begin(d: Dictionary) -> void:
 	m.game = game
 	m._new_board()
 	view = clampi(view, 0, game.players.size() - 1)
+	var own = d.get("own")      # a friend's ranked match (friend_cast.gd): their hand only
+	if own is float:
+		own = int(own)
+	var own_seat: int = own if own is int and own >= 0 and own < game.players.size() else -1
+	if own_seat >= 0:
+		view = own_seat
 	m.board.enable_replay(steps, view, pos)
+	if own_seat >= 0:
+		m.board.replay_own = own_seat
+		m.board.sync()
 	m.board.live_replay = true
 	m.board.replay_ended.connect(_on_ended)
 	m.board.replay_seek.connect(_on_seek)

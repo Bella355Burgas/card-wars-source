@@ -25,7 +25,7 @@ const BIO_MAX := 160                # characters of the description of a profile
 ## message, so the lines are plain words, and one without the game's answer can still answer by hand.
 const WATCH_ASK := "Хочу посмотреть твою игру"
 const WATCH_CODE := "Код наблюдателя: "
-const WATCH_NONE := "Сейчас мою игру смотреть нельзя: код наблюдателя есть только у хоста комнаты"
+const WATCH_NONE := "Сейчас мою игру смотреть нельзя"
 const RESULTS_KEPT := 20            # results of games waiting for the link
 ## Why a request failed, as a short line for the player.
 const REASONS := {"offline": "Нет связи", "timeout": "Нет связи", "token": "Нужно войти снова", "none": "Игрока нет в сети",

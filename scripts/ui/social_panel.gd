@@ -22,6 +22,7 @@ const WIDTH := 620.0
 const HOLD_SEC := 0.45          # a long press on a row
 const DRAG_PX := 14.0           # a press that moved more than this was a scroll
 const REFRESH_MS := 8000
+const WATCH_WAIT_SEC := 10.0    # the eye on a friend: how long their game may take to give its watch code
 const QUICK := ["Привет!", "Удачи!", "Хороший ход!", "Спасибо за игру!"]
 ## The colours an admin picks for a nick with one press (any other one by its code).
 const NICK_COLORS := ["ff4d4d", "ff9f1c", "ffd23f", "7ae582", "2ec4b6", "4dabf7", "9b5de5", "f15bb5", "ffffff", "541687"]
@@ -40,6 +41,7 @@ var _channel := Social.COMMON
 var _tabs := {}                 # tab -> Button
 var _body: VBoxContainer
 var _list: VBoxContainer        # rows of the online / friends tab
+var _watch_wait := {}           # nick -> a number: we asked this friend for their watch code (the eye)
 var _note: Label                # a line under the list: an answer, a reason
 var _chat_log: RichTextLabel
 var _chat_edit: LineEdit
@@ -464,6 +466,13 @@ func _row(r: Dictionary, request := false) -> Control:
 	else:
 		_play_button(h, r, nick, st, "Войти", "Позвать")
 		if fr == "friend":
+			if st == "game" and m.social_status()[0] != "game":
+				var wc := String(r.get("wc", ""))
+				var eye := WoodUI.eye_button(UI.BLUE, 54)
+				eye.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+				eye.tooltip_text = "Наблюдать"
+				eye.pressed.connect(func(): _watch_friend(nick, wc))
+				h.add_child(eye)
 			if st != "off":
 				h.add_child(_small("Написать", UI.BLUE, func(): open_chat(nick)))
 		elif fr == "" and _tab == "online":
@@ -545,6 +554,65 @@ func _invite(nick: String) -> void:
 	var text := "Приглашение отправлено: %s" % nick if ok else Social.reason(String(answer.get("r", "")))
 	_set_note(text, GREEN if ok else RED)
 	toast(text, [], 3.0)
+
+
+## The eye on a friend's row: their match by its watch code. The server's row may have it ("wc");
+## else their game is asked by a private message (Social.WATCH_ASK) and answers with it (_answer_watch).
+func _watch_friend(nick: String, wc: String) -> void:
+	if wc != "":
+		_start_watch(wc)
+		return
+	var n: int = int(_watch_wait.get(nick, 0)) + 1
+	_watch_wait[nick] = n
+	_set_note("Спрашиваем код наблюдателя у %s…" % nick)
+	social.say(nick, Social.WATCH_ASK)
+	await get_tree().create_timer(WATCH_WAIT_SEC).timeout
+	if _watch_wait.get(nick) == n:
+		_watch_wait.erase(nick)
+		var text := "%s не ответил. Наверное, у него старая версия игры" % nick
+		_set_note(text, RED)
+		toast(text, [], 4.0)
+
+
+func _start_watch(code: String) -> void:
+	hide_panel()
+	close_profile()
+	m.watch_friend(code)
+
+
+## A friend asks to watch our match: the watch code if we host one, else why not.
+func _answer_watch(nick: String) -> void:
+	var code: String = m.friend_watch_code()
+	if code == "":
+		social.say(nick, Social.WATCH_NONE)
+		return
+	social.say(nick, Social.WATCH_CODE + code)
+	toast("%s смотрит твою игру" % nick, [], 4.0, "watch:" + nick)
+
+
+## The private messages of the eye (Social.WATCH_*): true when the message was one of them and is handled.
+func _watch_message(ch: String, msg: Dictionary) -> bool:
+	if msg.get("me", false) or msg.get("sys", false) or ch == Social.COMMON or ch == Social.GAME:
+		return false
+	var text := String(msg.get("text", "")).strip_edges()
+	if text == Social.WATCH_ASK:
+		_answer_watch(ch)
+		return true
+	if text == Social.WATCH_NONE and _watch_wait.has(ch):
+		_watch_wait.erase(ch)
+		_set_note("%s сейчас не хост комнаты, смотреть нельзя" % ch, RED)
+		toast("%s сейчас не хост комнаты, смотреть нельзя" % ch, [], 4.0)
+		return true
+	var code := Social.watch_code_in(text)
+	if code == "":
+		return false
+	if _watch_wait.has(ch):
+		_watch_wait.erase(ch)
+		_start_watch(code)
+	else:
+		# A code that came late (or typed by hand): a note to watch by it.
+		toast("%s: можно посмотреть игру" % ch, [["Смотреть", UI.GREEN, func(): _start_watch(code)]], 15.0, "watch:" + ch)
+	return true
 
 
 func _join(code: String, pass_key := "") -> void:
@@ -687,12 +755,13 @@ func _append(msg: Dictionary) -> void:
 
 
 func _on_message(ch: String, msg: Dictionary) -> void:
+	var service := _watch_message(ch, msg)
 	if _shown and _tab == "chat" and ch == _channel:
 		_append(msg)
 		social.read(ch)
 		return
 	_refresh_chips()
-	if msg.get("me", false) or msg.get("sys", false) or ch == Social.COMMON:
+	if service or msg.get("me", false) or msg.get("sys", false) or ch == Social.COMMON:
 		return
 	if _shown and _tab == "chat":
 		return

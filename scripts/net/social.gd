@@ -21,6 +21,11 @@ const ASK_MS := 8000
 const KEEP := 100                   # messages of a channel kept
 const TEXT_MAX := 200
 const BIO_MAX := 160                # characters of the description of a profile
+## «Наблюдать» on a friend (the eye on their row): the friend's game gives its watch code by a private
+## message, so the lines are plain words, and one without the game's answer can still answer by hand.
+const WATCH_ASK := "Хочу посмотреть твою игру"
+const WATCH_CODE := "Код наблюдателя: "
+const WATCH_NONE := "Сейчас мою игру смотреть нельзя: код наблюдателя есть только у хоста комнаты"
 const RESULTS_KEPT := 20            # results of games waiting for the link
 ## Why a request failed, as a short line for the player.
 const REASONS := {"offline": "Нет связи", "timeout": "Нет связи", "token": "Нужно войти снова", "none": "Игрока нет в сети",
@@ -377,8 +382,25 @@ func _push_status() -> void:
 	if st == _sent_status:
 		return
 	_sent_status = st
-	_put({"op": "s_status", "st": st[0], "code": st[1], "pv": st[2] if st.size() > 2 else "friends",
-		"rt": st[3] if st.size() > 3 else "", "inv": st[4] if st.size() > 4 else "all"})
+	var d := {"op": "s_status", "st": st[0], "code": st[1], "pv": st[2] if st.size() > 2 else "friends",
+		"rt": st[3] if st.size() > 3 else "", "inv": st[4] if st.size() > 4 else "all"}
+	if st.size() > 5 and String(st[5]) != "":
+		d["wc"] = st[5]     # the watch code of our match: the server may give it to friends (rows' "wc")
+	_put(d)
+
+
+## The watch code in a message of the form WATCH_CODE + code, or "".
+static func watch_code_in(text: String) -> String:
+	text = text.strip_edges()
+	if not text.begins_with(WATCH_CODE):
+		return ""
+	var code := text.substr(WATCH_CODE.length()).strip_edges().to_upper()
+	if code.length() < 4 or code.length() > 8:
+		return ""
+	for ch in code:
+		if not ((ch >= "A" and ch <= "Z") or (ch >= "0" and ch <= "9")):
+			return ""
+	return code
 
 
 static func reason(r: String) -> String:

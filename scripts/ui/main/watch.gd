@@ -22,6 +22,7 @@ var g := 0                      # its id from the host
 var view := 0                   # the side the table shows, kept from game to game
 var _root: Control = null       # the window with the code
 var _status: Label = null
+var _edit: LineEdit = null
 var _end_root: Control = null   # the game is over
 var _link_root: Control = null  # the link to the server is lost
 var _switching := false         # main's _end_game while the next game is set: watching goes on
@@ -51,6 +52,7 @@ func show_watch() -> void:
 	v.add_child(m._title("Наблюдать"))
 	v.add_child(WoodUI.label("Код наблюдателя:", 24, UI.CREAM, 5, UI.UI_FONT))
 	var edit := LineEdit.new()
+	_edit = edit
 	edit.placeholder_text = "ABCDEF"
 	edit.max_length = 8
 	edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -82,12 +84,21 @@ func _close_window() -> void:
 		m._close_overlay(_root)
 	_root = null
 	_status = null
+	_edit = null
 
 
 func _set_status(text: String, color := Color.WHITE) -> void:
 	if _status != null and is_instance_valid(_status):
 		_status.text = text
 		_status.label_settings.font_color = color
+
+
+## The window with this code already in it, connecting (a friend's match, the eye on their row).
+func watch_code(code: String) -> void:
+	show_watch()
+	if _edit != null and is_instance_valid(_edit):
+		_edit.text = code
+	_start(code)
 
 
 func _start(text: String) -> void:

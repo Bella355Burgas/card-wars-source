@@ -2876,7 +2876,7 @@ func social_status() -> Array:
 	if board != null:
 		if net.mode == "relay" and net.room_code != "" and _replay == null:
 			# The room and its seat token: the server names the player of the seat in its log.
-			return ["game", net.room_code, "friends", net.seat_token(), inv]
+			return ["game", net.room_code, "friends", net.seat_token(), inv, friend_watch_code()]
 		return ["watch" if net.mode == "watch" or _replay != null else ("game" if _mode != "run" else "train"), "", "friends", "", inv]
 	if run_screen != null:
 		return ["train", "", "friends", "", inv]
@@ -2888,6 +2888,36 @@ func social_status() -> Array:
 	if net.mode == "watch":
 		return ["watch", "", "friends", "", inv]
 	return ["menu", "", "friends", "", inv]
+
+
+## The watch code of the match we host (a room for two, not a tournament's): friends may watch it
+## (the eye on our row, social_panel.gd). "" when there is none.
+func friend_watch_code() -> String:
+	if board == null or net.mode != "relay" or not net.is_host or net.team or not net.tour.is_empty():
+		return ""
+	return net.watch_code
+
+
+## The eye on a friend's row: watches their match by its watch code, from wherever we are.
+func watch_friend(code: String) -> void:
+	if board != null and online and game != null and game.phase != "over":
+		social_ui.toast("Сначала закончи игру", [], 3.0)
+		return
+	watch.stop()
+	watch._close_window()
+	if board != null or run_screen != null:
+		if online and net.mode != "watch":
+			net.leave()
+		_end_game()
+		show_title()
+	if net.mode != "":
+		net.leave()
+	if _lobby_root != null:
+		lobby._close_lobby()
+	for ch in overlay.get_children():
+		_close_overlay(ch)
+	_overlay_open = false
+	watch.watch_code(code)
 
 
 ## The player waits in a room of their own: players online can be called into it.

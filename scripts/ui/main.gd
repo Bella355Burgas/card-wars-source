@@ -379,6 +379,7 @@ func _layout() -> void:
 
 func _process(_delta: float) -> void:
 	_animate_title()
+	friend_cast.tick()
 	var pill := board == null and run_screen == null and _open_builder() == null
 	if pill and phone_layout:
 		# A phone: windows take the whole screen, the corner button would lie on them.
@@ -1271,6 +1272,7 @@ func _new_board() -> void:
 	_battle_track = ""
 	stage.add_child(board)
 	board.start(game)
+	board.set_spectators(friend_cast.spectators)
 	_layout()
 	board.game_finished.connect(_on_game_over)
 	board.menu_requested.connect(show_pause)
@@ -2903,6 +2905,17 @@ func friend_watch_code() -> String:
 
 
 ## We play a match for two against a person online now (any: a room, a quick game, ranked, a direct link).
+## The nicks of an online match for two by seat ("" where unknown): the watchers' hero panels.
+func match_nicks(my_seat: int) -> Array:
+	if not net.tour.is_empty() and net.tour.get("names") is Array and net.tour["names"].size() == 2:
+		return [String(net.tour["names"][0]), String(net.tour["names"][1])]
+	var out := ["", ""]
+	if my_seat == 0 or my_seat == 1:
+		out[my_seat] = account.nick
+		out[1 - my_seat] = _remote_nick
+	return out
+
+
 func online_duel() -> bool:
 	return board != null and online and not net.team and game != null and game.journal != null \
 		and game.players.size() == 2 and _replay == null and seat >= 0 and game.phase != "over"

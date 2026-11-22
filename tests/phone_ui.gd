@@ -592,6 +592,11 @@ func _game() -> void:
 	await _wait(1.0)
 	await _check("board_start")
 	var b = main.board
+	# Watchers of our match: their number in the corner, the list under it when pressed.
+	b.set_spectators(["gerk", "BrownBubbles", "Длинный_ник_зрителя"])
+	b._spec_button.pressed.emit()
+	await _check("board_spectators")
+	b.set_spectators([])
 	var p: int = main.game.turn_player
 	b._open_inspect(main.game.players[p].hand[0].id)
 	await _wait(0.5)

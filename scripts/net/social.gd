@@ -26,6 +26,9 @@ const BIO_MAX := 160                # characters of the description of a profile
 const WATCH_ASK := "Хочу посмотреть твою игру"
 const WATCH_CODE := "Код наблюдателя: "
 const WATCH_NONE := "Сейчас мою игру смотреть нельзя"
+## A watcher to the players of the match it watches (watch.gd): the counter of watchers on their table.
+const WATCH_ON := "Смотрю твою игру"
+const WATCH_OFF := "Больше не смотрю твою игру"
 const RESULTS_KEPT := 20            # results of games waiting for the link
 ## Why a request failed, as a short line for the player.
 const REASONS := {"offline": "Нет связи", "timeout": "Нет связи", "token": "Нужно войти снова", "none": "Игрока нет в сети",
@@ -221,7 +224,9 @@ func _on_data(d: Dictionary) -> void:
 				changed.emit()
 		"s_msg":
 			var ch := String(d.get("ch", ""))
-			add(ch, _msg(d))
+			var msg := _msg(d)
+			msg["live"] = true      # came while we are online (not the history of s_ok)
+			add(ch, msg)
 		"s_invited":
 			if d.get("code") is String and d.get("nick") is String:
 				invited.emit(d)
@@ -397,7 +402,7 @@ func _push_status() -> void:
 ## A private message of the eye (WATCH_ASK / WATCH_CODE / WATCH_NONE): handled, never shown.
 static func is_service(text: String) -> bool:
 	text = text.strip_edges()
-	return text == WATCH_ASK or text == WATCH_NONE or watch_code_in(text) != ""
+	return text in [WATCH_ASK, WATCH_NONE, WATCH_ON, WATCH_OFF] or watch_code_in(text) != ""
 
 
 ## The watch code in a message of the form WATCH_CODE + code, or "".

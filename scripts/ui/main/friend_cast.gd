@@ -4,17 +4,26 @@ extends RefCounted
 ## match for two (a guest of a room, a quick game, a ranked or tournament game, a direct link) has
 ## none the players are told, so our game opens a room of its own on the room server, nobody sits
 ## in it, and streams the match there (Net.spec_follow, as a host does for its room's watchers);
-## its watch code goes to the friend. A ranked or tournament match puts "own" (our seat) in the
-## head: the watchers see our hand only (board.gd replay_own), never the other player's.
+## its watch code goes to the friend. "own" (our seat) in the head: the watchers see the table from
+## our side; no hand is open to them (board.gd replay_closed).
+##
+## Who watches us: a watcher tells the players of the match (Social.WATCH_ON / WATCH_OFF, private
+## messages never shown, watch.gd), and its status stays «наблюдает» while it watches. The table shows
+## their number in its corner (board.set_spectators); one gone offline or doing something else drops out.
 
 const NetScript = preload("res://scripts/net/net.gd")
 const Replay = preload("res://scripts/core/replay.gd")
 ## How long the room server may take to give the watch code of the new room.
 const CODE_WAIT_MS := 8000
+## How often the watchers' statuses are checked while somebody watches.
+const SPEC_POLL_MS := 6000
 
 var m                       # main.gd
 var _net: Node = null       # our own link to the room server, for the watchers only
 var _game = null            # the match it streams
+var spectators: Array = []  # the nicks of those who watch our match now
+var _poll_at := 0
+var _polling := false
 
 
 func _init(main) -> void:
@@ -47,8 +56,8 @@ func code_for_friend() -> String:
 		return ""
 	var head := Replay.from_game(_game, "net", maxi(m.seat, 0), m.version_text())
 	head.erase("steps")
-	if not m.net.tour.is_empty():
-		head["own"] = m.seat     # ranked / tournament: the watchers see our hand only
+	head["own"] = m.seat         # the watchers see the table from our side
+	head["nicks"] = m.match_nicks(m.seat)
 	cast.spec_follow(_game, head)
 	return code
 
@@ -62,6 +71,54 @@ func _code_of(cast: Node) -> String:
 	return cast.watch_code
 
 
+## A watcher says it watches our match (Social.WATCH_ON).
+func spectator_on(nick: String) -> void:
+	if nick == "" or not m.online_duel():
+		return
+	if not spectators.has(nick):
+		spectators.append(nick)
+		m.social_ui.toast("%s смотрит твою игру" % nick, [], 4.0, "watch:" + nick)
+		_poll_at = Time.get_ticks_msec() + SPEC_POLL_MS
+	_show()
+
+
+func spectator_off(nick: String) -> void:
+	if spectators.has(nick):
+		spectators.erase(nick)
+		_show()
+
+
+## main._process: one who left without saying so (closed the game, lost the link) drops out.
+func tick() -> void:
+	if spectators.is_empty() or _polling or Time.get_ticks_msec() < _poll_at:
+		return
+	if not m.online_duel():
+		spectators.clear()
+		_show()
+		return
+	_polling = true
+	_poll_at = Time.get_ticks_msec() + SPEC_POLL_MS
+	var answer: Dictionary = await m.social.ask({"op": "s_online"})
+	_polling = false
+	if answer.get("op") != "s_online" or not (answer.get("players") is Array):
+		return      # no answer: nothing is known, nobody drops out
+	var watching := {}
+	for r in answer["players"]:
+		if r is Dictionary and String(r.get("st", "")) == "watch":
+			watching[String(r.get("nick", ""))] = true
+	var left := spectators.filter(func(n): return not watching.has(n))
+	if not left.is_empty():
+		for n in left:
+			spectators.erase(n)
+		_show()
+
+
+## The counter on the table (a new table gets it too: main._new_board).
+func _show() -> void:
+	if m.board != null and is_instance_valid(m.board):
+		m.board.set_spectators(spectators)
+
+
 ## The match is over or left: the room goes, its watchers are told the match is closed.
 func stop() -> void:
 	if _net != null and is_instance_valid(_net):
@@ -72,3 +129,4 @@ func stop() -> void:
 				cast.queue_free())
 	_net = null
 	_game = null
+	spectators.clear()

@@ -596,7 +596,6 @@ func _answer_watch(nick: String) -> void:
 		social.say(nick, Social.WATCH_NONE)
 		return
 	social.say(nick, Social.WATCH_CODE + code)
-	toast("%s смотрит твою игру" % nick, [], 4.0, "watch:" + nick)
 
 
 ## The private messages of the eye (Social.WATCH_*): true when the message was one of them and is handled.
@@ -604,6 +603,13 @@ func _watch_message(ch: String, msg: Dictionary) -> bool:
 	if msg.get("me", false) or msg.get("sys", false) or ch == Social.COMMON or ch == Social.GAME:
 		return false
 	var text := String(msg.get("text", "")).strip_edges()
+	if text == Social.WATCH_ON or text == Social.WATCH_OFF:
+		if msg.get("live", false):
+			if text == Social.WATCH_ON:
+				m.friend_cast.spectator_on(ch)
+			else:
+				m.friend_cast.spectator_off(ch)
+		return true
 	if text == Social.WATCH_ASK:
 		_answer_watch(ch)
 		return true

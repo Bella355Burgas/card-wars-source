@@ -678,6 +678,20 @@ func _build_spectators() -> void:
 	_spec_button.position = Vector2(24, 20)
 	_spec_button.tooltip_text = "Зрители"
 	_spec_button.visible = false
+	# A faint eye under the number, like a weak stamp; the number stays sharp over it.
+	var stamp := Control.new()
+	stamp.set_anchors_preset(Control.PRESET_FULL_RECT)
+	stamp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stamp.draw.connect(func(): WoodUI.draw_eye(stamp, 0.3))
+	stamp.resized.connect(stamp.queue_redraw)
+	_spec_button.add_child(stamp)
+	var count := WoodUI.label_fixed("", 30 if Phone.active else 28, Color.WHITE, 6)
+	count.name = "Count"
+	count.set_anchors_preset(Control.PRESET_FULL_RECT)
+	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	count.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_spec_button.add_child(count)
 	_spec_button.pressed.connect(func():
 		_spec_list.visible = not _spec_list.visible)
 	hud.add_child(_spec_button)
@@ -689,9 +703,16 @@ func _build_spectators() -> void:
 	_spec_list.gui_input.connect(func(e: InputEvent):
 		if e is InputEventMouseButton and e.pressed:
 			_spec_list.visible = false)
+	var pad := MarginContainer.new()     # the text off the plate's edge
+	for side_name in ["left", "right"]:
+		pad.add_theme_constant_override("margin_" + side_name, 14)
+	for side_name in ["top", "bottom"]:
+		pad.add_theme_constant_override("margin_" + side_name, 8)
+	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_spec_list.add_child(pad)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 2)
-	_spec_list.add_child(box)
+	pad.add_child(box)
 	hud.add_child(_spec_list)
 
 
@@ -701,10 +722,10 @@ func set_spectators(nicks: Array) -> void:
 	if _spec_button == null:
 		return
 	_spec_button.visible = not _spectators.is_empty()
-	_spec_button.text = str(_spectators.size())
+	_spec_button.get_node("Count").text = str(_spectators.size())
 	if _spectators.is_empty():
 		_spec_list.visible = false
-	var box: VBoxContainer = _spec_list.get_child(0)
+	var box: VBoxContainer = _spec_list.get_child(0).get_child(0)
 	for c in box.get_children():
 		c.queue_free()
 	var title := WoodUI.label_fixed("Смотрят:", 24 if Phone.active else 18, Color(1.0, 0.84, 0.35), 4, UI.UI_FONT)

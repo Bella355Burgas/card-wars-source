@@ -707,10 +707,10 @@ func set_spectators(nicks: Array) -> void:
 	var box: VBoxContainer = _spec_list.get_child(0)
 	for c in box.get_children():
 		c.queue_free()
-	var title := WoodUI.label_fixed("Смотрят:", 24 if Phone.active else 18, WoodUI.INK, 0, UI.UI_FONT)
+	var title := WoodUI.label_fixed("Смотрят:", 24 if Phone.active else 18, Color(1.0, 0.84, 0.35), 4, UI.UI_FONT)
 	box.add_child(title)
 	for nick in _spectators:
-		var l := WoodUI.label_fixed(String(nick), 30 if Phone.active else 22, WoodUI.INK, 0)
+		var l := WoodUI.label_fixed(String(nick), 30 if Phone.active else 22, UI.CREAM, 5)
 		l.custom_minimum_size.x = 120
 		box.add_child(l)
 	_spec_list.reset_size()

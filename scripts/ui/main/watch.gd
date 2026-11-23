@@ -234,6 +234,8 @@ func _begin(d: Dictionary) -> void:
 		m.board.hero_ui[key]["side"] = -1
 	m.board.sync()
 	_tell_players(m.board.seat_nicks)
+	m.board.show_chat_button(true)      # the friends panel: the chat, another match to watch
+	m.board.set_chat_unread(m.social.unread_total())
 	m.board.live_replay = true
 	m.board.replay_ended.connect(_on_ended)
 	m.board.replay_seek.connect(_on_seek)

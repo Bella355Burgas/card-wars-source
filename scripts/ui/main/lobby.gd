@@ -563,6 +563,8 @@ func _on_net_message(d: Dictionary) -> void:
 			if d.get("nick") is String:
 				m._remote_nick = _clean_nick(d["nick"])
 				_match_lines()
+		"specs":
+			m.friend_cast.remote_spectators(d.get("nicks"))     # who watches the match, told the other player
 		"ready":
 			if not m.net.is_host and m.game == null:
 				_remote_ready = true

@@ -10,6 +10,8 @@ extends RefCounted
 ## Who watches us: a watcher tells the players of the match (Social.WATCH_ON / WATCH_OFF, private
 ## messages never shown, watch.gd), and its status stays «наблюдает» while it watches. The table shows
 ## their number in its corner (board.set_spectators); one gone offline or doing something else drops out.
+## The two players pass on whom they were told of ("specs" in the match), so both tables show every
+## watcher of the match, whoever it came to watch (a private message may reach only a friend).
 
 const NetScript = preload("res://scripts/net/net.gd")
 const Replay = preload("res://scripts/core/replay.gd")
@@ -21,7 +23,9 @@ const SPEC_POLL_MS := 6000
 var m                       # main.gd
 var _net: Node = null       # our own link to the room server, for the watchers only
 var _game = null            # the match it streams
-var spectators: Array = []  # the nicks of those who watch our match now
+var spectators: Array = []  # the nicks of those who watch our match now (ours and the other player's)
+var _mine: Array = []       # the watchers who told us (Social.WATCH_ON)
+var _theirs: Array = []     # the watchers the other player was told of (its "specs" message)
 var _poll_at := 0
 var _polling := false
 
@@ -75,26 +79,56 @@ func _code_of(cast: Node) -> String:
 func spectator_on(nick: String) -> void:
 	if nick == "" or not m.online_duel():
 		return
-	if not spectators.has(nick):
-		spectators.append(nick)
-		m.social_ui.toast("%s смотрит твою игру" % nick, [], 4.0, "watch:" + nick)
+	if not _mine.has(nick):
+		_mine.append(nick)
 		_poll_at = Time.get_ticks_msec() + SPEC_POLL_MS
-	_show()
+	_tell_other()
 
 
 func spectator_off(nick: String) -> void:
-	if spectators.has(nick):
-		spectators.erase(nick)
-		_show()
+	if _mine.has(nick):
+		_mine.erase(nick)
+		_tell_other()
+
+
+## The other player's watchers ("specs" in the match, lobby.gd).
+func remote_spectators(nicks) -> void:
+	if not (nicks is Array) or not m.online_duel():
+		return
+	_theirs = []
+	for n in nicks.slice(0, 20):
+		if n is String and n != "" and not _theirs.has(n):
+			_theirs.append(n.substr(0, 24))
+	_update()
+
+
+## Ours to the other player, and the counter.
+func _tell_other() -> void:
+	m.net.send({"t": "specs", "nicks": _mine})
+	_update()
+
+
+## Both lists on the table; one who came is greeted on both tables.
+func _update() -> void:
+	var all: Array = _mine.duplicate()
+	for n in _theirs:
+		if not all.has(n):
+			all.append(n)
+	for n in all:
+		if not spectators.has(n):
+			m.social_ui.toast("%s смотрит вашу игру" % n, [], 4.0, "watch:" + n)
+	spectators = all
+	_show()
 
 
 ## main._process: one who left without saying so (closed the game, lost the link) drops out.
 func tick() -> void:
-	if spectators.is_empty() or _polling or Time.get_ticks_msec() < _poll_at:
+	if _mine.is_empty() or _polling or Time.get_ticks_msec() < _poll_at:
 		return
 	if not m.online_duel():
-		spectators.clear()
-		_show()
+		_mine.clear()
+		_theirs.clear()
+		_update()
 		return
 	_polling = true
 	_poll_at = Time.get_ticks_msec() + SPEC_POLL_MS
@@ -106,11 +140,11 @@ func tick() -> void:
 	for r in answer["players"]:
 		if r is Dictionary and String(r.get("st", "")) == "watch":
 			watching[String(r.get("nick", ""))] = true
-	var left := spectators.filter(func(n): return not watching.has(n))
+	var left := _mine.filter(func(n): return not watching.has(n))
 	if not left.is_empty():
 		for n in left:
-			spectators.erase(n)
-		_show()
+			_mine.erase(n)
+		_tell_other()
 
 
 ## The counter on the table (a new table gets it too: main._new_board).
@@ -130,3 +164,5 @@ func stop() -> void:
 	_net = null
 	_game = null
 	spectators.clear()
+	_mine.clear()
+	_theirs.clear()

@@ -1276,7 +1276,8 @@ func _new_board() -> void:
 	_layout()
 	board.game_finished.connect(_on_game_over)
 	board.menu_requested.connect(show_pause)
-	board.chat_requested.connect(func(): social_ui.show_panel("chat", Social.GAME))
+	# Watching, the chat is the common one (the players' match chat is theirs).
+	board.chat_requested.connect(func(): social_ui.show_panel("chat", Social.COMMON if watch.active else Social.GAME))
 	board.items_requested.connect(_toggle_run_items)
 
 

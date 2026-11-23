@@ -96,7 +96,7 @@ func remote_spectators(nicks) -> void:
 	if not (nicks is Array) or not m.online_duel():
 		return
 	_theirs = []
-	for n in nicks.slice(0, 20):
+	for n in nicks.slice(0, 100):
 		if n is String and n != "" and not _theirs.has(n):
 			_theirs.append(n.substr(0, 24))
 	_update()
@@ -108,15 +108,12 @@ func _tell_other() -> void:
 	_update()
 
 
-## Both lists on the table; one who came is greeted on both tables.
+## Both lists on the table (no note over the screen: the counter in the corner is enough).
 func _update() -> void:
 	var all: Array = _mine.duplicate()
 	for n in _theirs:
 		if not all.has(n):
 			all.append(n)
-	for n in all:
-		if not spectators.has(n):
-			m.social_ui.toast("%s смотрит вашу игру" % n, [], 4.0, "watch:" + n)
 	spectators = all
 	_show()
 

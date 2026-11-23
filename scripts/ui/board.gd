@@ -154,6 +154,7 @@ var seat_nicks: Array = []      # «Наблюдать»: the players' nicks by 
 var _spectators: Array = []     # our match online: the nicks of those who watch it (set_spectators)
 var _spec_button: Button = null
 var _spec_list: PanelContainer = null
+const SPEC_ROWS := 6            # the watchers' list shows this many nicks; more are scrolled
 var views: Dictionary = {}
 
 var world: Node2D
@@ -699,10 +700,7 @@ func _build_spectators() -> void:
 	_spec_list.add_theme_stylebox_override("panel", WoodUI.plate(UI.BLUE, 3, 7, 14))
 	_spec_list.position = Vector2(24, 20 + side + 8)
 	_spec_list.visible = false
-	_spec_list.mouse_filter = Control.MOUSE_FILTER_STOP
-	_spec_list.gui_input.connect(func(e: InputEvent):
-		if e is InputEventMouseButton and e.pressed:
-			_spec_list.visible = false)
+	_spec_list.mouse_filter = Control.MOUSE_FILTER_STOP     # closed by the counter again: a long list is scrolled
 	var pad := MarginContainer.new()     # the text off the plate's edge
 	for side_name in ["left", "right"]:
 		pad.add_theme_constant_override("margin_" + side_name, 14)
@@ -713,6 +711,16 @@ func _build_spectators() -> void:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 2)
 	pad.add_child(box)
+	box.add_child(WoodUI.label_fixed("Смотрят:", 24 if Phone.active else 18, Color(1.0, 0.84, 0.35), 4, UI.UI_FONT))
+	var scroll := ScrollContainer.new()     # more than SPEC_ROWS nicks: scrolled, like the log
+	scroll.name = "Scroll"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	box.add_child(scroll)
+	var nicks := VBoxContainer.new()
+	nicks.name = "Nicks"
+	nicks.add_theme_constant_override("separation", 2)
+	nicks.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(nicks)
 	hud.add_child(_spec_list)
 
 
@@ -725,15 +733,23 @@ func set_spectators(nicks: Array) -> void:
 	_spec_button.get_node("Count").text = str(_spectators.size())
 	if _spectators.is_empty():
 		_spec_list.visible = false
-	var box: VBoxContainer = _spec_list.get_child(0).get_child(0)
+	var scroll: ScrollContainer = _spec_list.find_child("Scroll", true, false)
+	var box: VBoxContainer = scroll.get_node("Nicks")
 	for c in box.get_children():
+		box.remove_child(c)
 		c.queue_free()
-	var title := WoodUI.label_fixed("Смотрят:", 24 if Phone.active else 18, Color(1.0, 0.84, 0.35), 4, UI.UI_FONT)
-	box.add_child(title)
+	var row := 0.0
+	var wide := 120.0
 	for nick in _spectators:
 		var l := WoodUI.label_fixed(String(nick), 30 if Phone.active else 22, UI.CREAM, 5)
-		l.custom_minimum_size.x = 120
 		box.add_child(l)
+		row = l.get_combined_minimum_size().y
+		wide = maxf(wide, l.get_combined_minimum_size().x)
+	# Up to SPEC_ROWS nicks the plate fits them all; more scroll inside the same height.
+	var shown := mini(_spectators.size(), SPEC_ROWS)
+	var bar := 14.0 if _spectators.size() > SPEC_ROWS else 0.0
+	scroll.custom_minimum_size = Vector2(minf(wide, 300.0 if Phone.active else 260.0) + bar, shown * row + maxi(shown - 1, 0) * 2)
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO if _spectators.size() > SPEC_ROWS else ScrollContainer.SCROLL_MODE_DISABLED
 	_spec_list.reset_size()
 
 

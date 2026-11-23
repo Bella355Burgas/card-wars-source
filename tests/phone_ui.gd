@@ -596,6 +596,11 @@ func _game() -> void:
 	b.set_spectators(["gerk", "BrownBubbles", "Длинный_ник_зрителя"])
 	b._spec_button.pressed.emit()
 	await _check("board_spectators")
+	var many := []
+	for i in 20:
+		many.append("Зритель_%d" % (i + 1))
+	b.set_spectators(many)
+	await _check("board_spectators_20")
 	b.set_spectators([])
 	var p: int = main.game.turn_player
 	b._open_inspect(main.game.players[p].hand[0].id)

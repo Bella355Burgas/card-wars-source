@@ -340,13 +340,13 @@ func _on_matchmaking(d: Dictionary) -> void:
 			_search_found = false
 
 
-## An opponent is found (a quick game or a ranked one, once per search): the "your turn" sound,
+## An opponent is found (a quick game or a ranked one, once per search): a bright chime (Sfx "found"),
 ## heard in the background too (the game never mutes itself there), and the taskbar button
 ## blinks while the window is not the active one. A sound volume of 0 keeps it quiet.
 func _match_found() -> void:
 	var sfx := m.get_node_or_null("/root/Sfx")
 	if sfx != null:
-		sfx.play("turn", -1.0, 3.0)
+		sfx.play("found")
 	if not DisplayServer.window_is_focused():
 		DisplayServer.window_request_attention()
 
